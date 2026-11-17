@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Сколько корней?</title>
+<style>
+:root{color-scheme:dark;--bg:#0a1a38;--card:#10284f;--tx:#e8f0ff;--mut:#9db4d8;--pr:#3b82f6;--pl:#1c3a6b;--or:#e8590c;--ok:#2b9348;--no:#d62828;--bd:#28487d;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{background:linear-gradient(160deg,#081530,#0d2b5c) fixed;min-height:100vh}
+.prof{display:flex;gap:14px;align-items:center;cursor:pointer}
+.ava{font-size:34px;width:60px;height:60px;border-radius:50%;background:var(--pl);display:grid;place-items:center;flex:none}
+.lb{display:grid;grid-template-columns:44px 1fr auto 56px;gap:8px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--bd)}
+.avs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:12px}
+.avs button{padding:8px 10px;font-size:20px}
+input{width:100%;font:inherit;padding:12px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx)}
+h1,.stages,.meta,.sub{position:relative}
+#app{max-width:680px;margin:0 auto;padding:16px}
+h1{color:#8ec5ff;text-align:center;margin:8px 0 4px;font-size:30px;letter-spacing:.5px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;margin:12px 0}
+.sub{color:var(--mut);text-align:center;margin:0 0 8px}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:12px 18px;color:#fff;background:var(--pr)}
+button.or{background:var(--or);font-weight:600}
+button.gh{background:var(--pl);color:var(--tx)}
+button:disabled{opacity:.9;cursor:default}
+.modes{display:grid;gap:12px}
+.modes button{text-align:left;padding:16px}
+.modes small{display:block;font-weight:400;opacity:.9}
+.stages{display:flex;justify-content:center;gap:22px;margin:6px 0 10px}
+.dot{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-weight:700;border:2px solid var(--bd);color:var(--mut);background:var(--card)}
+.dot.on{background:var(--or);color:#fff;border-color:var(--or);box-shadow:0 0 0 5px rgba(232,89,12,.25),0 0 18px var(--or)}
+.dot.done{background:var(--pr);color:#fff;border-color:var(--pr)}
+.meta{display:flex;justify-content:space-between;color:var(--mut);font-size:14px}
+.eq{font-size:30px;text-align:center;padding:22px 6px;font-weight:600;overflow-x:auto;white-space:nowrap}
+.ans{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ans button{font-size:20px;padding:16px 4px}
+.ans button.right{background:var(--ok)}.ans button.wrong{background:var(--no)}.ans button.sel{outline:3px solid var(--or);outline-offset:2px}
+.fb{border-left:5px solid var(--no);padding:8px 12px;margin-top:12px}
+.fb.good{border-color:var(--ok)}
+.fb p{margin:4px 0}
+svg{display:block;margin:8px auto;max-width:100%;background:var(--bg);border-radius:10px}
+.cheat{background:var(--pl);border-radius:10px;padding:10px 14px;margin-top:10px;font-size:15px}
+.cheat li{margin:3px 0}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-top:12px}
+.big{font-size:44px;font-weight:800;color:var(--pr);text-align:center}
+.tbl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.tbl div{background:var(--pl);border-radius:10px;padding:8px}
+.topics{display:grid;gap:8px}
+.topics button{text-align:left;background:var(--pl);color:var(--tx);border:2px solid transparent}
+.topics button.hard{border-color:var(--or)}
+.topics button.sel{border-color:var(--pr)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src='https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js'></script>
+<script src='https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js'></script>
+<script src='https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js'></script>
+<script>
+// ВСТАВЬ СЮДА НАСТРОЙКИ FIREBASE вместо null, например: {apiKey:'...',authDomain:'...',projectId:'...',appId:'...'}
+const FB_CONFIG={apiKey:"AIzaSyBIBVayqSyh5vi-_LBNVYrI5qUwZefniTI",authDomain:"korni-game.firebaseapp.com",projectId:"korni-game",appId:"1:603519712372:web:a2b464642eee1c191ea521"};
+const $=s=>document.querySelector(s);
+const rn=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[rn(0,a.length-1)];
+const shuf=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+const M='−';
+const n2=v=>(v<0?M:'')+Math.abs(v);
+const CAT={signs:'Знаки a и c',cmp:'Сравнение b² и 4ac',sq:'Полный квадрат'};
+const REF={
+signs:{t:'Разные знаки a и c',b:['Если a и c <b>разные знаки</b>, то произведение ac &lt; 0, значит −4ac &gt; 0 и D = b² − 4ac &gt; 0.','Результат: всегда <b>2 корня</b>, какой бы ни был b (даже если b нет).','Пример: 2x² + 5x − 3 = 0. a = 2, c = −3, знаки разные → 2 корня.','Ловушка: смотри знаки у a и c после переноса всех членов в одну часть!']},
+cmp:{t:'Одинаковые знаки: сравниваем b² и 4ac',b:['Если a и c <b>одного знака</b>, всё решает сравнение b² и 4ac.','b² &gt; 4ac → <b>2 корня</b>. b² &lt; 4ac → <b>0 корней</b>.','Если члена с x нет (b = 0), то b² = 0 &lt; 4ac → <b>0 корней</b>.','Пример: x² + 3x + 5 = 0: b² = 9, 4ac = 20, 9 &lt; 20 → 0 корней.']},
+sq:{t:'Полный квадрат',b:['Если b² = 4ac, то D = 0 и уравнение сворачивается по формуле (kx ± m)².','Результат: ровно <b>1 корень</b>.','Пример: x² + 6x + 9 = (x + 3)², b² = 36 = 4·1·9 → 1 корень.','Совет: проверь, что a и c — полные квадраты (или оба кратны одному числу), а b = 2·k·m.']}};
+let mode,stage,idx,qs,score,stats,sSc,cur,done,showCheat;
+
+function poly(a,b,c){let s='';[[a,'x²'],[b,'x'],[c,'']].forEach(([v,x])=>{if(!v)return;const ab=Math.abs(v),co=(ab===1&&x)?'':ab;
+ s+=s?(v<0?' − ':' + '):(v<0?M:'');s+=co+x;});return s||'0';}
+
+function examForm(a,b,c,adv,st,mix){
+ const std=poly(a,b,c)+' = 0';
+ if(Math.random()>=((mix||adv)?.5:.35))return std;
+ const opts=[];
+ if(c)opts.push(()=>poly(a,b,0)+' = '+n2(-c));
+ if(b)opts.push(()=>poly(a,0,c)+' = '+poly(0,-b,0));
+ if(b&&c)opts.push(()=>poly(a,0,0)+' = '+poly(0,-b,-c));
+ return opts.length?pick(opts)():std;
+}
+function gen(type,adv,st,mix){
+ const Mx=adv?Math.min(8,3+st):2+st, sg=(adv||st>1)?pick([1,-1]):1;
+ let a,b,c,cat,form='';
+ const same=()=>{a=sg*rn(1,Mx);c=sg*rn(1,Mx)};
+ if(type==='signs'){a=sg*rn(1,Mx);c=-sg*rn(1,Mx);b=rn(-Mx,Mx);cat='signs';}
+ else if(type==='nob'){same();b=0;cat='cmp';}
+ else if(type==='sq'){const nn=1;let k,m;do{k=rn(1,adv?3:2);m=rn(1,3)}while(k*m>6);
+  a=sg*nn*k*k;c=sg*nn*m*m;b=sg*pick([1,-1])*2*nn*k*m;cat='sq';
+  form=(sg<0?M:'')+(nn>1?nn:'')+'('+(k>1?k:'')+'x '+(b*sg<0?'−':'+')+' '+m+')²';}
+ else{same();const r=Math.round(Math.sqrt(4*a*c)),lo=adv?Math.max(1,r-3):1,hi=adv?r+3:r+4,cs=[];
+  for(let v=lo;v<=hi;v++){const g=v*v>4*a*c,l=v*v<4*a*c;if(type==='gt'?g:l)cs.push(v);}
+  const cc=cs.filter(v=>v<=(adv?14:12));b=pick(cc.length?cc:cs)*pick([1,-1]);cat='cmp';}
+ let shown=examForm(a,b,c,adv,st,mix);
+ const D=b*b-4*a*c;
+ return{a,b,c,cat,form,shown,norm:poly(a,b,c)+' = 0',r:D>0?2:D===0?1:0,type};
+}
+function makeStage(){
+ const t=shuf(['signs','signs','gt','lt','sq','nob',pick(['sq','gt','signs','lt'])]);
+ qs=t.map(x=>mode==='rate'?genRate(x,stage):gen(x,false,stage+1,mode==='adv'));
+}
+const SK='korni-profile';
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function loadP(){try{return JSON.parse(localStorage.getItem(SK))||{}}catch(e){return {}}}
+function saveP(p){try{localStorage.setItem(SK,JSON.stringify(p))}catch(e){}}
+let savedFlag=false;
+function saveRes(){if(savedFlag)return;savedFlag=true;const p=loadP();if(mode==='rate'){const r=loadR(),n=p.name||'Игрок',e=r[n]||{pts:0};e.pts+=score;e.a=p.ava||'🙂';r[n]=e;saveR(r);}else addBoard(p);p.games=(p.games||0)+1;p[mode]=Math.max(p[mode]||0,score);p.hist=(p.hist||[]).concat({m:mode,s:score,d:new Date().toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'})}).slice(-5);saveP(p);}
+function loadB(){try{return JSON.parse(localStorage.getItem('korni-board'))||[]}catch(e){return []}}
+function addBoard(p){const b=loadB();b.push({n:p.name||'Игрок',a:p.ava||'🙂',m:mode,s:score,d:new Date().toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'})});b.sort((x,y)=>y.s-x.s);try{localStorage.setItem('korni-board',JSON.stringify(b.slice(0,100)))}catch(e){}}
+function loadR(){try{return JSON.parse(localStorage.getItem('korni-rate'))||{}}catch(e){return {}}}
+function saveR(r){try{localStorage.setItem('korni-rate',JSON.stringify(r))}catch(e){}}
+function myPts(){const n=loadP().name||'Игрок';return (loadR()[n]||{}).pts||0;}
+const mlabel=()=>mode==='rate'?'🏆 Рейтинговый':mode==='adv'?'🔥 Продвинутый':'🌱 Базовый';
+function genRate(x,s){const tier=Math.floor(myPts()/200);return tier===0?gen(x,false,s+1):gen(x,true,Math.min(12,s+1+2*(tier-1)),true);}
+function diaryR(){const t=myPts(),lv=Math.floor(t/200);
+ $('#app').innerHTML=`<h1>ДНЕВНИК</h1><p class='sub'>🏆 Рейтинговый режим</p>
+ <div class='card'><div class='big'>+${score}</div><p class='sub'>очков за эту игру из 21</p><div class='tbl'>${sSc.map((s,i)=>`<div><div class='sub'>Этап ${i+1}</div><b>${s} / 7</b></div>`).join('')}</div></div>
+ <div class='card'><div class='tbl'><div><div class='sub'>Всего очков</div><b>${t}</b></div><div><div class='sub'>Уровень</div><b>${lv+1}</b></div><div><div class='sub'>До след. уровня</div><b>${(lv+1)*200-t}</b></div></div><p class='sub' style='margin-top:10px'>${t>=21?'Ты в таблице лидеров! 🏆':'До таблицы лидеров: '+(21-t)+' очков'}</p></div>
+ <div class='row'><button class='gh' onclick='menu()'>В меню</button><button class='gh' data-m='rate' onclick='board(this.dataset.m)'>🏆 Лидерборд</button><button class='or' data-m='rate' onclick='start(this.dataset.m)'>Играть снова</button></div>`;}
+function board(m){m=m||'rate';
+ const tab=(k,l)=>`<button class='${m===k?'or':'gh'}' data-m='${k}' onclick='board(this.dataset.m)'>${l}</button>`,md=['🥇','🥈','🥉'];let body;
+ if(m==='rate'){const rows=Object.entries(loadR()).filter(([n,e])=>e.pts>=21).sort((x,y)=>y[1].pts-x[1].pts).slice(0,100),t=myPts();
+  body=(rows.length?rows.map(([n,e],i)=>`<div class='lb'><span>${md[i]||(i+1)+'.'}</span><span>${e.a||'🙂'} ${esc(n)}</span><b>${e.pts}</b><span class='sub'>ур. ${Math.floor(e.pts/200)+1}</span></div>`).join(''):`<p class='sub'>Пока никого — набери 21 очко и стань первым!</p>`)+`<p class='sub' style='margin-top:10px'>Твои очки: <b>${t}</b>${t<21?' · до таблицы осталось '+(21-t):''}</p>`;}
+ else{const rows=loadB().filter(x=>x.m===m).slice(0,10);
+  body=rows.length?rows.map((r,i)=>`<div class='lb'><span>${md[i]||(i+1)+'.'}</span><span>${r.a} ${esc(r.n)}</span><b>${r.s}/21</b><span class='sub'>${r.d}</span></div>`).join(''):`<p class='sub'>Пока пусто</p>`;}
+ $('#app').innerHTML=`<h1>🏆 ЛИДЕРБОРД</h1><p class='sub'>${m==='rate'?'Рейтинг: в таблице игроки от 21 очка, топ-100':'Результаты тренировочных игр (топ-10)'}</p>
+  <p class='sub' style='font-size:13px'>Таблица хранится только на этом устройстве</p>
+  <div class='row' style='justify-content:center;margin:0 0 8px'>${tab('rate','🏆 Рейтинг')}${tab('adv','🔥 Продвинутый')}${tab('base','🌱 Базовый')}</div>
+ 
+ <div class='card'>${body}${loadP().name?'':`<p class='sub'>Создай профиль с именем, чтобы играть под своим именем.</p>`}</div>
+ <div class='row'><button class='gh' onclick='menu()'>← Назад</button><button class='or' onclick='playMenu()'>▶ Играть</button></div>`;}
+function boardOld(m){m=m||'adv';const rows=loadB().filter(x=>x.m===m).slice(0,10),md=['🥇','🥈','🥉'];
+ $('#app').innerHTML=`<h1>🏆 ЛИДЕРБОРД</h1><p class='sub'>Лучшие результаты на этом устройстве</p>
+ <div class='row' style='justify-content:center'><button class='${m==='base'?'or':'gh'}' data-m='base' onclick='board(this.dataset.m)'>🌱 Базовый</button><button class='${m==='adv'?'or':'gh'}' data-m='adv' onclick='board(this.dataset.m)'>🔥 Продвинутый</button></div>
+ <div class='card'>${rows.length?rows.map((r,i)=>`<div class='lb'><span>${md[i]||(i+1)+'.'}</span><span>${r.a} ${esc(r.n)}</span><b>${r.s}/21</b><span class='sub'>${r.d}</span></div>`).join(''):'<p class="sub">Пока пусто — стань первым!</p>'}
+ ${loadP().name?'':'<p class="sub">Создай профиль с именем, чтобы попасть в таблицу под своим именем.</p>'}</div>
+ <div class='row'><button class='gh' onclick='menu()'>← Назад</button><button class='or' onclick='playMenu()'>▶ Играть</button></div>`;}
+function playMenu(){
+ $('#app').innerHTML=`<h1>ВЫБЕРИ РЕЖИМ</h1>
+ <div class='card'><b>Правила игры</b><ul><li>3 этапа по 7 уравнений.</li><li>Уравнения записаны так же, как в заданиях ОГЭ и ЕГЭ: сначала приведи уравнение к виду ax² + bx + c = 0.</li><li><b>2 корня</b> — если у a и c разные знаки ИЛИ если одинаковые, но b² больше 4ac.</li><li><b>1 корень</b> — если уравнение сворачивается в квадрат по формуле (a ± b)².</li><li><b>0 корней</b> — если у a и c одинаковые знаки, а b нет вообще ИЛИ его квадрат меньше чем 4ac.</li></ul></div>
+ <div class='modes'><button data-m='base' onclick='start(this.dataset.m)'>🌱 Базовый режим<small>Шпаргалка под рукой, короткое пояснение ошибок</small></button>
+ <button class='or' data-m='adv' onclick='start(this.dataset.m)'>🔥 Продвинутый режим<small>Без шпаргалки и разбора, уравнения сложнее</small></button>
+ <button class='or' data-m='rate' onclick='start(this.dataset.m)'>🏆 Рейтинговый режим<small>Без шпаргалок и подсказок. 1 верный ответ = 1 очко, ошибка = 0. Чем больше очков, тем сложнее. Твои очки: ${myPts()}</small></button></div>
+ <div class='row'><button class='gh' onclick='menu()'>← Назад</button></div>`;}
+function menu(){const p=loadP();
+ $('#app').innerHTML=`<h1>СКОЛЬКО КОРНЕЙ?</h1><p class='sub'>${p.name?'Привет, '+esc(p.name)+'! ':''}Определяй число корней мгновенно</p>
+ <div class='card prof' onclick='profile()'><div class='ava'>${p.ava||'🙂'}</div><div><b>${p.name?esc(p.name):'Создать профиль'}</b><div class='sub' style='text-align:left'>Игр: ${p.games||0} · рекорд 🌱 ${p.base||0}/21 · 🔥 ${p.adv||0}/21</div></div></div>
+ <div class='modes'><button class='or' onclick='playMenu()'>▶ Играть</button><button onclick='board()'>🏆 Лидерборд<small>Лучшие результаты на этом устройстве</small></button></div>`;}
+function menuOld3(){
+ const p=loadP();
+ $('#app').innerHTML=`<h1>СКОЛЬКО КОРНЕЙ?</h1><p class='sub'>${p.name?'Привет, '+esc(p.name)+'! ':''}Определяй число корней мгновенно</p>
+ <div class='card prof' onclick='profile()'><div class='ava'>${p.ava||'🙂'}</div><div><b>${p.name?esc(p.name):'Создать профиль'}</b><div class='sub' style='text-align:left'>Игр: ${p.games||0} · рекорд 🌱 ${p.base||0}/21 · 🔥 ${p.adv||0}/21</div></div></div>
+ <div class='card'><b>Правила игры</b><ul><li>3 этапа по 7 уравнений.</li><li>Выбирай: 0, 1 или 2 корня.</li><li><b>2 корня</b> — a и c разные знаки, или одинаковые, но b² &gt; 4ac.</li><li><b>1 корень</b> — уравнение сворачивается в квадрат (a ± b)².</li><li><b>0 корней</b> — a и c одинаковые знаки, а b нет вообще или b² &lt; 4ac.</li></ul></div>
+ <div class='modes'><button data-m='base' onclick='start(this.dataset.m)'>🌱 Базовый режим<small>Шпаргалка под рукой, подробный разбор ошибок</small></button>
+ <button class='or' data-m='adv' onclick='start(this.dataset.m)'>🔥 Продвинутый режим<small>Без шпаргалки, уравнения сложнее, краткий разбор</small></button></div>`;
+}
+let tmpAva;
+function profile(){const p=loadP();tmpAva=p.ava||'🙂';
+ $('#app').innerHTML=`<h1>ПРОФИЛЬ</h1><div class='card'><div class='ava' id='av' style='margin:0 auto 10px'>${tmpAva}</div><div class='avs'>${['🙂','😎','🦊','🐼','🚀','🧠','⭐','🎯'].map(e=>`<button class='gh' onclick='setAva(this.textContent)'>${e}</button>`).join('')}</div><input id='nm' maxlength='20' placeholder='Твоё имя' value='${esc(p.name||'')}'>
+ <div class='tbl' style='margin-top:12px'><div><div class='sub'>Игр</div><b>${p.games||0}</b></div><div><div class='sub'>🌱 рекорд</div><b>${p.base||0}/21</b></div><div><div class='sub'>🔥 рекорд</div><b>${p.adv||0}/21</b></div></div>
+ <p><b>Последние игры</b></p>${(p.hist||[]).slice().reverse().map(h=>`<div>${h.m==='adv'?'🔥':h.m==='rate'?'🏆':'🌱'} ${h.s}/21 · ${h.d}</div>`).join('')||'<div class="sub">Пока пусто</div>'}</div>
+ <div class='row'><button class='gh' onclick='menu()'>Назад</button><button class='or' onclick='saveProf()'>Сохранить</button></div>`;}
+function setAva(e){tmpAva=e;$('#av').textContent=e;}
+function saveProf(){const p=loadP();p.name=$('#nm').value.trim();p.ava=tmpAva;saveP(p);menu();}
+function menuOld(){
+ $('#app').innerHTML=`<h1>СКОЛЬКО КОРНЕЙ?</h1><p class="sub">Квадратные уравнения: определяй число корней мгновенно</p>
+ <div class="card"><b>Правила игры</b><ul><li>3 этапа по 7 уравнений.</li><li>Выбирай: 0, 1 или 2 корня.</li><li><b>2 корня</b> — a и c разные знаки, или одинаковые, но b² &gt; 4ac.</li><li><b>1 корень</b> — уравнение сворачивается в квадрат (a ± b)².</li><li><b>0 корней</b> — a и c одинаковые знаки, а b нет вообще или b² &lt; 4ac.</li></ul></div>
+ <div class="modes"><button onclick="start('base')">🌱 Базовый режим<small>Шпаргалка под рукой, подробный разбор ошибок</small></button>
+ <button class="or" onclick="start('adv')">🔥 Продвинутый режим<small>Без шпаргалки, уравнения сложнее, краткий разбор</small></button></div>`;
+}
+function start(m){savedFlag=false;mode=m;stage=0;idx=0;score=0;sSc=[0,0,0];showCheat=false;
+ stats={signs:{t:0,e:0},cmp:{t:0,e:0},sq:{t:0,e:0}};makeStage();game();}
+function cheatHtml(){return `<div class="cheat"><b>Шпаргалка</b><ul><li><b>2 корня</b> — если у a и c <b>разные знаки ИЛИ</b> если одинаковые, но коэффициент b в квадрате больше 4ac</li><li><b>1 корень</b> — если уравнение сворачивается в квадрат по формуле (a ± b)²</li><li><b>0 корней</b> — если у a и c одинаковые знаки, а центрального числа b <b>нет вообще ИЛИ</b> его квадрат меньше чем 4ac</li></ul></div>`;}
+let sel=null,tries=0,exitArm=false;
+function back(){if(exitArm){menu();return;}exitArm=true;$('#bk').textContent='Точно выйти? Прогресс пропадёт';setTimeout(()=>{exitArm=false;const b=$('#bk');if(b)b.textContent='← В меню'},3000);}
+function game(){
+ cur=qs[idx];done=false;sel=null;tries=0;exitArm=false;
+ const dots=[0,1,2].map(i=>`<div class='dot ${i<stage?'done':i===stage?'on':''}'>${i<stage?'✓':i+1}</div>`).join('');
+ $('#app').innerHTML=`<div class='row' style='margin:0 0 4px'><button class='gh' id='bk' onclick='back()'>← В меню</button></div><div class='stages'>${dots}</div>
+ <div class='meta'><span>${mlabel()} · этап ${stage+1}</span><span>Уравнение ${idx+1}/7 · ${mode==='rate'?'очки':'верно с 1-й попытки'}: ${score}</span></div>
+ <div class='card'><div class='eq'>${cur.shown}</div>
+ <div class='ans'>${[0,1,2].map(i=>`<button id='b${i}' onclick='choose(${i})'>${i} ${i===1?'корень':i===2?'корня':'корней'}</button>`).join('')}</div>
+ <div id='act'></div>
+ ${mode==='base'?`<div class='row'><button class='gh' onclick='toggleCheat()'>📖 Шпаргалка</button></div><div id='ch'>${showCheat?cheatHtml():''}</div>`:''}
+ <div id='fb'></div></div>`;
+}
+function hintB3(q){const t=q.cat==='signs'?'Знаки a и c здесь разные. Вспомни, что говорит об этом первое правило.':q.cat==='sq'?'Проверь, не сворачивается ли уравнение в квадрат (a ± b)². Для этого сравни b² и 4ac.':q.b===0?'Знаки a и c одинаковые, а члена с x нет (b = 0). Загляни в правило про такой случай.':'Знаки a и c одинаковые, значит, нужно сравнить b² и 4ac. Посчитай их и сверься с правилами.';return (q.shown!==q.norm?`<p>Сначала приведи к виду ax² + bx + c = 0: ${q.norm}.</p>`:'')+`<p><b>Пояснение:</b> ${t}</p>`;}
+function hintA3(){return `<p>Сложно? Выйди в меню и выбери 🌱 базовый режим — там есть шпаргалка.</p>`;}
+function hintB2(){return `<p>Вспомни правила и подумай ещё раз:</p><ul><li>Какие знаки у a и c?</li><li>Если знаки одинаковые, как соотносятся b² и 4ac?</li><li>Есть ли член с x? Сворачивается ли уравнение в квадрат (a ± b)²?</li></ul>`;}
+function hintA2(){return `<p>💡 Подумай ещё раз: вспомни правила.</p>`;}
+function clearSel(){document.querySelectorAll('.ans button').forEach(b=>b.classList.remove('sel'));}
+function choose(i){if(done)return;sel=i;clearSel();$('#b'+i).classList.add('sel');$('#act').innerHTML=`<div class='row'><button class='gh' onclick='unchoose()'>← Назад</button><button class='or' onclick='check()'>Ответить: ${i}</button></div>`;}
+function unchoose(){sel=null;clearSel();$('#act').innerHTML='';}
+function hintBase(q){const {a,b,c}=q,same=a*c>0;
+ return `<p><b>Подсказка по правилам</b></p><p>1) Перенеси всё в одну часть: ${q.norm}. Тогда a = ${n2(a)}, b = ${b?n2(b):'нет (b = 0)'}, c = ${n2(c)}.</p><p>2) Знаки a и c: <b>${same?'одинаковые':'разные'}</b>.</p>${same?`<p>3) Найди b² = ${b*b} и 4ac = ${4*a*c}. Сравни их и сверься с правилами в шпаргалке.</p>`:`<p>3) Найди в шпаргалке, что говорит правило про разные знаки a и c.</p>`}`;}
+function hintAdv(q,t){const nz={signs:'Приведи уравнение к виду ax² + bx + c = 0 и внимательно посмотри на знаки a и c.',sq:'Проверь: не сворачивается ли уравнение в квадрат по формуле (kx ± m)²? Сравни b² и 4ac.',cmp:q.b===0?'Посмотри, есть ли в уравнении член с x. Что это значит для b?':'Знаки a и c одинаковые. Посчитай b² и 4ac и сравни их.'};
+ return `<p>💡 ${nz[q.cat]}</p>`+(t>1?`<p>Приведено к виду: ${q.norm}. a = ${n2(q.a)}, b = ${n2(q.b)}, c = ${n2(q.c)}.</p>`:'');}
+function check(){
+ if(done||sel===null)return;tries++;const q=cur,ok=sel===q.r;
+ if(tries===1){stats[q.cat].t++;if(!ok)stats[q.cat].e++;}
+ if(ok){done=true;if(tries===1){score++;sSc[stage]++;}
+  clearSel();$('#b'+sel).classList.add('right');document.querySelectorAll('.ans button').forEach(b=>b.disabled=true);
+  const last=idx===6,lbl=last?(stage===2?'Дневник →':'Этап '+(stage+2)+' →'):'ДАЛЕЕ';
+  $('#act').innerHTML='';
+  $('#fb').innerHTML=`<div class='fb good'><p><b>✅ Верно!</b>${tries>1?' С попытки №'+tries+'.':''}</p></div><div class='row'><span></span><button class='or' onclick='next()'>${lbl}</button></div>`;
+ }else if(mode==='rate'){done=true;const last=idx===6,lbl=last?(stage===2?'Дневник →':'Этап '+(stage+2)+' →'):'ДАЛЕЕ';clearSel();$('#b'+sel).classList.add('wrong');document.querySelectorAll('.ans button').forEach(b=>b.disabled=true);$('#act').innerHTML='';
+  $('#fb').innerHTML=`<div class='fb'><p><b>❌ Неверно.</b> 0 очков.</p></div><div class='row'><span></span><button class='or' onclick='next()'>${lbl}</button></div>`;
+ }else{
+  unchoose();
+  $('#fb').innerHTML=`<div class='fb'><p><b>❌ Пока неверно.</b> Подумай и попробуй ещё раз.</p>${mode==='base'?hintB3(q):hintA3()}</div>`;
+ }}
+function gameOld(){
+ cur=qs[idx];done=false;
+ const dots=[0,1,2].map(i=>`<div class="dot ${i<stage?'done':i===stage?'on':''}">${i<stage?'✓':i+1}</div>`).join('');
+ $('#app').innerHTML=`<div class="stages">${dots}</div>
+ <div class="meta"><span>${mode==='adv'?'🔥 Продвинутый':'🌱 Базовый'} · этап ${stage+1}</span><span>Уравнение ${idx+1}/7 · верно: ${score}</span></div>
+ <div class="card"><div class="eq">${cur.shown}</div>
+ <div class="ans">${[0,1,2].map(i=>`<button id="b${i}" onclick="answer(${i})">${i} ${i===1?'корень':i===2?'корня':'корней'}</button>`).join('')}</div>
+ ${mode==='base'?`<div class="row"><button class="gh" onclick="toggleCheat()">📖 Шпаргалка</button></div><div id="ch">${showCheat?cheatHtml():''}</div>`:''}
+ <div id="fb"></div></div>`;
+}
+function toggleCheat(){showCheat=!showCheat;$('#ch').innerHTML=showCheat?cheatHtml():'';}
+function scheme(q){
+ const up=q.a>0,dir=up?1:-1,vy=q.r===1?100:(q.r===2?(up?140:60):(up?60:140)),ye=vy-dir*100;
+ let dots='';
+ if(q.r===1)dots='<circle cx="150" cy="100" r="6" fill="#e8590c"/>';
+ if(q.r===2){const u=Math.sqrt((vy-100)/(dir*100))*100;dots=`<circle cx="${150-u}" cy="100" r="6" fill="#e8590c"/><circle cx="${150+u}" cy="100" r="6" fill="#e8590c"/>`;}
+ return `<svg viewBox="0 0 300 200" width="300" role="img" aria-label="Схема параболы"><line x1="10" y1="100" x2="290" y2="100" stroke="#888" stroke-width="2"/><text x="270" y="92" font-size="12" fill="#888">ось x</text><path d="M50,${ye} Q150,${2*vy-ye} 250,${ye}" fill="none" stroke="#4da3ff" stroke-width="3" clip-path="inset(0)"/>${dots}<text x="10" y="18" font-size="13" fill="currentColor">${up?'a > 0: ветви вверх':'a < 0: ветви вниз'}</text><text x="10" y="190" font-size="13" fill="currentColor">${['0 точек пересечения','1 точка касания','2 точки пересечения'][q.r]}</text></svg>`;
+}
+function explain(q){
+ const {a,b,c}=q,w=mode==='base';
+ const abc=`a = ${n2(a)}, b = ${n2(b)}, c = ${n2(c)}`;
+ const rule=(a*c<0)?`a и c разных знаков → ac &lt; 0 → D &gt; 0 → <b>2 корня</b>.`:
+  b===0?`a и c одного знака, а члена с x нет (b = 0): b² = 0 &lt; 4ac = ${4*a*c} → <b>0 корней</b>.`:
+  q.r===2?`a и c одного знака. b² = ${b*b} &gt; 4ac = ${4*a*c} → <b>2 корня</b>.`:
+  q.r===1?`a и c одного знака. b² = ${b*b} = 4ac = ${4*a*c} → сворачивается в квадрат${q.form?' '+q.form:''} → <b>1 корень</b>.`:
+  `a и c одного знака. b² = ${b*b} &lt; 4ac = ${4*a*c} → <b>0 корней</b>.`;
+ if(!w)return `<p>${rule}</p>`;
+ return `<p><b>Шаг 1.</b> Переносим всё в одну часть: ${q.norm}. ${abc}.</p><p><b>Шаг 2.</b> Смотрим на знаки a и c: ${a*c<0?'разные':'одинаковые'}.</p><p><b>Шаг 3.</b> ${rule}</p>`;
+}
+function answer(n){
+ if(done)return;done=true;
+ const ok=n===cur.r;stats[cur.cat].t++;
+ if(ok){score++;sSc[stage]++;}else stats[cur.cat].e++;
+ $('#b'+cur.r).classList.add('right');if(!ok)$('#b'+n).classList.add('wrong');
+ document.querySelectorAll('.ans button').forEach(b=>b.disabled=true);
+ const last=idx===6,lbl=last?(stage===2?'Дневник →':'Этап '+(stage+2)+' →'):'ДАЛЕЕ';
+ $('#fb').innerHTML=`<div class="fb ${ok?'good':''}">${ok?'<p><b>✅ Верно!</b></p>':'<p><b>❌ Неверно.</b> Правильный ответ: '+cur.r+'</p>'+explain(cur)}${ok?'':scheme(cur)}</div><div class="row"><span></span><button class="or" onclick="next()">${lbl}</button></div>`;
+}
+function next(){idx++;if(idx===7){stage++;idx=0;if(stage===3){return diary();}makeStage();}game();}
+function diary(){saveRes();if(mode==='rate'){diaryR();return;}
+ const hardest=Object.keys(stats).sort((x,y)=>stats[y].e-stats[x].e)[0];
+ const any=stats[hardest].e>0;
+ const msg=score>=19?'Блестяще! Ты почти без ошибок.':score>=14?'Хороший результат, осталось подтянуть мелочи.':'Есть над чем поработать — загляни в справки ниже.';
+ $('#app').innerHTML=`<h1>ДНЕВНИК</h1><p class="sub">${mode==='adv'?'🔥 Продвинутый':'🌱 Базовый'} режим</p>
+ <div class="card"><div class="big">${score} / 21</div><p class="sub">${msg}</p>
+ <div class="tbl">${sSc.map((s,i)=>`<div><div class="sub">Этап ${i+1}</div><b>${s} / 7</b></div>`).join('')}</div></div>
+ <div class="card"><b>Где сложнее всего? Нажми на тему — там справка</b><div class="topics" style="margin-top:8px">
+ ${Object.keys(CAT).map(k=>`<button id="t-${k}" class="${any&&k===hardest?'hard':''}" onclick="ref('${k}')">${k==='signs'?'⚖️':k==='cmp'?'🔍':'🔲'} ${CAT[k]} — ошибок: ${stats[k].e} из ${stats[k].t}${any&&k===hardest?' 🔥':''}</button>`).join('')}</div>
+ <div id="ref"></div></div>
+ <div class="row"><button class="gh" onclick="menu()">В меню</button><button class="or" onclick="start('${mode}')">Играть снова</button></div>`;
+ if(any)ref(hardest);
+}
+const RULES={signs:{t:'Знаки a и c',b:['<b>2 корня</b> — если у a и c <b>разные знаки</b> (ИЛИ если одинаковые, но коэффициент b в квадрате больше 4ac).']},cmp:{t:'Сравнение b² и 4ac',b:['<b>2 корня</b> — если у a и c одинаковые знаки, но коэффициент b в квадрате больше 4ac.','<b>0 корней</b> — если у a и c одинаковые знаки, а центрального числа b <b>нет вообще ИЛИ</b> его квадрат меньше чем 4ac.']},sq:{t:'Полный квадрат',b:['<b>1 корень</b> — если уравнение сворачивается в квадрат по формуле (a ± b)².','Проверка: b² равно 4ac.']}};
+const rootsWord=r=>r===1?'1 корень':r===2?'2 корня':'0 корней';
+function why(q){const {a,b,c}=q;if(a*c<0)return 'у a и c разные знаки';if(b===0)return 'знаки a и c одинаковые, члена с x нет вообще';return 'знаки a и c одинаковые: b² = '+(b*b)+', 4ac = '+(4*a*c)+(q.r===1&&q.form?', сворачивается: '+q.form:'');}
+let pq=[],pi=0,pk='',pFirst=0,pT=0;
+function ruleBox(k){return `<div class='cheat'><b>${RULES[k].t}</b><ul>${RULES[k].b.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;}
+function ref(k){document.querySelectorAll('.topics button').forEach(b=>b.classList.remove('sel'));$('#t-'+k).classList.add('sel');$('#ref').innerHTML=ruleBox(k)+`<div class='row'><span></span><button class='or' data-k='${k}' onclick='practice(this.dataset.k)'>✍️ Решить 5 примеров</button></div>`;}
+function practice(k){pk=k;pi=0;pFirst=0;const ty=k==='cmp'?shuf(['gt','lt','nob','gt','lt']):Array(5).fill(k);const seen=new Set();pq=ty.map(t=>{let q,n=0;do{q=gen(t,false,2,mode==='adv');n++}while(seen.has(q.norm)&&n<30);seen.add(q.norm);return q;});pshow();}
+function pshow(){const q=pq[pi];pT=0;$('#ref').innerHTML=ruleBox(pk)+`<div class='cheat'><b>Тренировка: пример ${pi+1} из 5</b><div class='eq' style='font-size:26px;padding:14px 0'>${q.shown}</div><div class='ans'>${[0,1,2].map(i=>`<button id='p${i}' onclick='pans(${i})'>${i} ${i===1?'корень':i===2?'корня':'корней'}</button>`).join('')}</div><div id='pf'></div></div>`;}
+function pans(i){const q=pq[pi];pT++;
+ if(i===q.r){if(pT===1)pFirst++;document.querySelectorAll('#ref .ans button').forEach(b=>b.disabled=true);$('#p'+i).classList.add('right');
+  $('#pf').innerHTML=`<div class='fb good'><p><b>✅ Верно!</b></p></div><div class='row'><span></span><button class='or' onclick='pnext()'>${pi===4?'Результат →':'ДАЛЕЕ'}</button></div>`;}
+ else{$('#pf').innerHTML=`<div class='fb'><p><b>❌ Неверно.</b> Подумай ещё раз и вспомни правило.</p></div>`;}}
+function pnext(){pi++;if(pi<5){pshow();return;}
+ $('#ref').innerHTML=ruleBox(pk)+`<div class='cheat'><div class='big' style='font-size:34px'>${pFirst} / 5</div><p class='sub'>верно с первой попытки</p><div class='row'><button class='gh' onclick='ref(pk)'>← К справке</button><button class='or' onclick='practice(pk)'>🔁 Ещё 5 примеров</button></div></div>`;}
+function refOld2(k){
+ document.querySelectorAll('.topics button').forEach(b=>b.classList.remove('sel'));$('#t-'+k).classList.add('sel');
+ const ty=k==='signs'?['signs','signs','signs','signs','signs']:k==='sq'?['sq','sq','sq','sq','sq']:shuf(['gt','lt','nob','gt','lt']);
+ const seen=new Set(),ex=[];
+ ty.forEach(t=>{let q,n=0;do{q=gen(t,false,2);n++}while(seen.has(q.norm)&&n<30);seen.add(q.norm);ex.push(q);});
+ $('#ref').innerHTML=`<div class='cheat'><b>${RULES[k].t}</b><ul>${RULES[k].b.map(x=>`<li>${x}</li>`).join('')}</ul><b>5 примеров с ответами</b><ol>${ex.map(q=>`<li>${q.norm} — ${why(q)} → <b>${rootsWord(q.r)}</b></li>`).join('')}</ol></div>`;}
+function refOld(k){
+ document.querySelectorAll('.topics button').forEach(b=>b.classList.remove('sel'));$('#t-'+k).classList.add('sel');
+ $('#ref').innerHTML=`<div class="cheat"><b>${REF[k].t}</b><ul>${REF[k].b.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+}
+const CLOUD=!!(window.firebase&&FB_CONFIG);
+const _menu=menu,_board=board,_profile=profile,_saveRes=saveRes,_saveProf=saveProf;
+let auth,fdb,CU=null,authReady=!CLOUD,pendingName=null;
+function authScreen(msg){$('#app').innerHTML=`<h1>СКОЛЬКО КОРНЕЙ?</h1><p class='sub'>Войди или зарегистрируйся, чтобы сохранять результаты</p><div class='card'><input id='lu' maxlength='12' placeholder='Имя (логин)' style='margin-bottom:8px'><input id='lp' type='password' placeholder='Пароль (минимум 6 символов)'><p class='sub' id='lm' style='color:#ff9a9a;margin-top:8px'>${esc(msg||'')}</p><div class='row'><button class='gh' onclick='doAuth(false)'>Войти</button><button class='or' onclick='doAuth(true)'>Зарегистрироваться</button></div></div>`;}
+async function doAuth(reg){const n=$('#lu').value.trim(),pw=$('#lp').value,lm=$('#lm');
+ if(n.length<2||pw.length<6){lm.textContent='Имя от 2 символов, пароль от 6.';return;}
+ const em='u'+Array.from(new TextEncoder().encode(n.toLowerCase())).map(b=>b.toString(16).padStart(2,'0')).join('')+'@korni.app';
+ try{if(reg){pendingName=n;const c=await auth.createUserWithEmailAndPassword(em,pw);await c.user.updateProfile({displayName:n});}else await auth.signInWithEmailAndPassword(em,pw);}
+ catch(e){const M={'auth/email-already-in-use':'Такое имя уже занято.','auth/invalid-credential':'Неверное имя или пароль.','auth/wrong-password':'Неверное имя или пароль.','auth/user-not-found':'Неверное имя или пароль.','auth/invalid-email':'Используй буквы и цифры в имени.'};lm.textContent=M[e.code]||('Ошибка: '+(e.code||e.message));}}
+function logout(){auth.signOut();try{localStorage.removeItem(SK)}catch(e){}}
+function push(extra){if(!CU)return;const p=loadP();fdb.collection('players').doc(CU.uid).set(Object.assign({name:CU.name,ava:p.ava||'🙂',games:p.games||0,base:p.base||0,adv:p.adv||0},extra||{}),{merge:true}).catch(()=>{});}
+async function boardCloud(){
+ $('#app').innerHTML=`<h1>🏆 ЛИДЕРБОРД</h1><p class='sub'>Загрузка…</p>`;
+ let rows=[],err='';
+ try{const s=await fdb.collection('players').where('pts','>=',21).orderBy('pts','desc').limit(100).get();rows=s.docs.map(d=>d.data());}catch(e){err='Не удалось загрузить таблицу: '+(e.code||e.message);}
+ const md=['🥇','🥈','🥉'],t=myPts();
+ $('#app').innerHTML=`<h1>🏆 ЛИДЕРБОРД</h1><p class='sub'>Рейтинг: в таблице игроки от 21 очка, топ-100</p><div class='card'>${err?`<p class='sub'>${esc(err)}</p>`:rows.length?rows.map((d,i)=>`<div class='lb'><span>${md[i]||(i+1)+'.'}</span><span>${d.ava||'🙂'} ${esc(d.name)}${d.name===CU.name?' (ты)':''}</span><b>${d.pts}</b><span class='sub'>ур. ${Math.floor(d.pts/200)+1}</span></div>`).join(''):`<p class='sub'>Пока никого — набери 21 очко и стань первым!`}<p class='sub' style='margin-top:10px'>Твои очки: <b>${t}</b>${t<21?' · до таблицы осталось '+(21-t):''}</p></div><div class='row'><button class='gh' onclick='menu()'>← Назад</button><button class='or' onclick='playMenu()'>▶ Играть</button></div>`;}
+menu=function(){if(CLOUD&&!authReady){$('#app').innerHTML=`<p class='sub'>Загрузка…</p>`;return;}if(CLOUD&&!CU){authScreen();return;}_menu();if(CU)$('#app').insertAdjacentHTML('beforeend',`<div class='row'><span class='sub'>Аккаунт: ${esc(CU.name)}</span><button class='gh' onclick='logout()'>Выйти</button></div>`);};
+board=function(m){if(CU)boardCloud();else _board(m);};
+profile=function(){_profile();if(CU){const i=$('#nm');i.value=CU.name;i.disabled=true;}};
+saveProf=function(){_saveProf();push();};
+saveRes=function(){const was=savedFlag,m=mode,s=score;_saveRes();if(CU&&!was)push(m==='rate'?{pts:firebase.firestore.FieldValue.increment(s)}:{});};
+if(CLOUD){firebase.initializeApp(FB_CONFIG);auth=firebase.auth();fdb=firebase.firestore();
+ auth.onAuthStateChanged(async u=>{
+  if(!u){CU=null;authReady=true;menu();return;}
+  try{const ref=fdb.collection('players').doc(u.uid),name=u.displayName||pendingName||'Игрок';let s=await ref.get();
+   if(!s.exists){await ref.set({name,ava:'🙂',pts:0,games:0,base:0,adv:0});s=await ref.get();}
+   const d=s.data();CU={uid:u.uid,name};
+   const old=loadP(),p={name,ava:d.ava||'🙂',games:d.games||0,base:d.base||0,adv:d.adv||0,hist:old.name===name?(old.hist||[]):[]};
+   saveP(p);const r=loadR();r[name]={pts:d.pts||0,a:p.ava};saveR(r);
+  }catch(e){CU=null;authReady=true;authScreen('Нет связи с сервером: '+(e.code||e.message));return;}
+  authReady=true;menu();});}
+menu();
+</script>
+</body>
+</html>
